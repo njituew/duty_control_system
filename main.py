@@ -3,7 +3,6 @@ import json
 import datetime
 import os
 
-
 DATA_FILE = "data.json"
 
 
@@ -75,7 +74,7 @@ def main(page: ft.Page):
     def create_item_button(text: str, states: dict):
         return ft.FilledButton(
             text,
-            width=158,
+            width=160,
             height=48,
             on_click=lambda e: toggle_arrival(e, text, states),
             style=ft.ButtonStyle(
@@ -84,142 +83,149 @@ def main(page: ft.Page):
             ),
         )
 
-    def build_grid(items: list, states: dict, columns: int = 3):
-        controls = []
-        row = []
+    # Адаптивные функции
+    def get_columns_count(width: float) -> int:
+        if width < 600:
+            return 2
+        elif width < 800:
+            return 3
+        elif width < 1000:
+            return 4
+        else:
+            return 5
 
-        for item in items:
-            col = ft.Column(
-                [
-                    create_item_button(item, states),
-                    states[item]["text"],
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=4,
-                tight=True,
-            )
-            row.append(col)
+    def build_grid(items: list, states: dict, columns: int):
+        if not items:
+            return ft.Text("Список пуст", color=ft.Colors.GREY_500, size=16)
 
-            if len(row) == columns:
-                controls.append(
-                    ft.Row(
-                        row,
-                        alignment=ft.MainAxisAlignment.START,
-                        spacing=16,
-                        run_spacing=12,
-                    )
-                )
-                row = []
-
-        if row:
-            controls.append(
-                ft.Row(
-                    row,
-                    alignment=ft.MainAxisAlignment.START,
-                    spacing=16,
-                    run_spacing=12,
+        grid_items = []
+        for i, item in enumerate(items):
+            grid_items.append(
+                ft.Column(
+                    [
+                        create_item_button(item, states),
+                        states[item]["text"],
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=4,
+                    alignment=ft.MainAxisAlignment.CENTER,
                 )
             )
+
+        return ft.GridView(
+            controls=grid_items,
+            runs_count=columns,
+            max_extent=180,  # максимальная ширина колонки
+            spacing=12,
+            run_spacing=12,
+            child_aspect_ratio=1.2,
+            padding=0,
+            expand=True,
+        )
+
+    def build_vertical_grid(items: list, states: dict):
+        if not items:
+            return ft.Text("Список пуст", color=ft.Colors.GREY_500, size=16)
 
         return ft.Column(
-            controls,
-            spacing=12,
+            [
+                ft.Row(
+                    [
+                        create_item_button(item, states),
+                        states[item]["text"],
+                    ],
+                    spacing=16,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                )
+                for item in items
+            ],
+            spacing=8,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
 
+    # Создание контейнеров
     vehicles_container = ft.Container(
-        content=build_grid(vehicles, vehicle_states),
-        height=480,
-        width=540,
         border=ft.Border.all(1, ft.Colors.GREEN_900),
         border_radius=10,
         padding=16,
         bgcolor=ft.Colors.GREY_900,
+        expand=True,
     )
 
     personnel_container = ft.Container(
-        content=build_grid(personnel, personnel_states),
-        height=480,
-        width=540,
         border=ft.Border.all(1, ft.Colors.GREEN_900),
         border_radius=10,
         padding=16,
         bgcolor=ft.Colors.GREY_900,
+        expand=True,
     )
 
-    def refresh():
-        vehicles_container.content = build_grid(vehicles, vehicle_states)
-        personnel_container.content = build_grid(personnel, personnel_states)
-        page.update()
+    # Основной контейнер
+    main_container = ft.Container(expand=True)
 
-    refresh()
+    def refresh_layout(width: float = None):
+        if width is None:
+            width = page.width
 
-    def create_input_section(
-        label_new: str, label_remove: str, lst: list, states: dict
-    ):
-        new_field = ft.TextField(
-            label=label_new,
-            width=220,
-            dense=True,
-            border_color=ft.Colors.GREEN_800,
-            focused_border_color=ft.Colors.GREEN_400,
-        )
-        add_btn = ft.FilledButton(
-            "Добавить",
-            on_click=lambda e: add(new_field, lst, states),
-        )
+        # Определяем режим отображения
+        if width < 880:
+            # Вертикальный режим
+            columns = get_columns_count(width)
 
-        remove_field = ft.TextField(
-            label=label_remove,
-            width=220,
-            dense=True,
-            border_color=ft.Colors.GREEN_800,
-            focused_border_color=ft.Colors.GREEN_400,
-        )
-        remove_btn = ft.OutlinedButton(
-            "Удалить",
-            on_click=lambda e: remove(remove_field, lst, states),
-        )
+            vehicles_container.content = build_grid(vehicles, vehicle_states, columns)
+            personnel_container.content = build_grid(
+                personnel, personnel_states, columns
+            )
 
-        return ft.Column(
-            [
-                ft.Row([new_field, add_btn], spacing=12),
-                ft.Row([remove_field, remove_btn], spacing=12),
-            ],
-            spacing=8,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        )
-
-    def add(field: ft.TextField, lst: list, states: dict):
-        val = field.value.strip()
-        if val and val not in lst:
-            lst.append(val)
-            states[val] = {
-                "arrived": False,
-                "arrival_time": None,
-                "departure_time": None,
-                "text": ft.Text("", size=13, color=ft.Colors.GREY_300),
-            }
-            save_data()
-            refresh()
-            field.value = ""
-            page.update()
-
-    def remove(field: ft.TextField, lst: list, states: dict):
-        val = field.value.strip()
-        if val in lst:
-            lst.remove(val)
-            states.pop(val, None)
-            save_data()
-            refresh()
-            field.value = ""
-            page.update()
-
-    page.add(
-        ft.Container(
-            content=ft.Row(
+            main_container.content = ft.Column(
                 [
+                    # Секция ТС
+                    ft.Text(
+                        "Транспортные средства",
+                        size=20,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.GREEN_300,
+                    ),
+                    vehicles_container,
+                    create_input_section(
+                        "Добавить ТС",
+                        "Удалить ТС",
+                        vehicles,
+                        vehicle_states,
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.GREEN_900),
+                    # Секция командования
+                    ft.Text(
+                        "Командование",
+                        size=20,
+                        weight=ft.FontWeight.BOLD,
+                        color=ft.Colors.GREEN_300,
+                    ),
+                    personnel_container,
+                    create_input_section(
+                        "Добавить",
+                        "Удалить",
+                        personnel,
+                        personnel_states,
+                    ),
+                ],
+                spacing=20,
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
+            )
+        else:
+            # Горизонтальный режим
+            columns = get_columns_count((width - 160) // 2)
+
+            vehicles_container.content = build_grid(vehicles, vehicle_states, columns)
+            personnel_container.content = build_grid(
+                personnel, personnel_states, columns
+            )
+
+            main_container.content = ft.Row(
+                [
+                    # Левая колонка - ТС
                     ft.Column(
                         [
                             ft.Text(
@@ -240,7 +246,8 @@ def main(page: ft.Page):
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         expand=True,
                     ),
-                    ft.VerticalDivider(width=80, color=ft.Colors.GREEN_900),
+                    ft.VerticalDivider(width=60, color=ft.Colors.GREEN_900),
+                    # Правая колонка - командование
                     ft.Column(
                         [
                             ft.Text(
@@ -251,7 +258,10 @@ def main(page: ft.Page):
                             ),
                             personnel_container,
                             create_input_section(
-                                "Добавить", "Удалить", personnel, personnel_states
+                                "Добавить",
+                                "Удалить",
+                                personnel,
+                                personnel_states,
                             ),
                         ],
                         spacing=16,
@@ -259,17 +269,89 @@ def main(page: ft.Page):
                         expand=True,
                     ),
                 ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                vertical_alignment=ft.CrossAxisAlignment.START,
                 spacing=40,
-                scroll=ft.ScrollMode.AUTO,
+                vertical_alignment=ft.CrossAxisAlignment.START,
                 expand=True,
-            ),
-            expand=True,
-            padding=20,
+            )
+
+        page.update()
+
+    def on_resize(e):
+        refresh_layout(page.width)
+
+    page.on_resize = on_resize
+
+    def create_input_section(label_add, label_remove, lst, states):
+        new_field = ft.TextField(
+            label=label_add,
+            width=240,
+            dense=True,
+            border_color=ft.Colors.GREEN_800,
+            focused_border_color=ft.Colors.GREEN_400,
         )
-    )
+        add_btn = ft.FilledButton(
+            "Добавить", on_click=lambda e: add(new_field, lst, states)
+        )
+
+        rem_field = ft.TextField(
+            label=label_remove,
+            width=240,
+            dense=True,
+            border_color=ft.Colors.GREEN_800,
+            focused_border_color=ft.Colors.GREEN_400,
+        )
+        rem_btn = ft.OutlinedButton(
+            "Удалить", on_click=lambda e: remove(rem_field, lst, states)
+        )
+
+        return ft.Column(
+            [
+                ft.Row(
+                    [new_field, add_btn],
+                    spacing=12,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                ft.Row(
+                    [rem_field, rem_btn],
+                    spacing=12,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+            ],
+            spacing=8,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+    def add(field: ft.TextField, lst: list, states: dict):
+        val = field.value.strip()
+        if val and val not in lst:
+            lst.append(val)
+            states[val] = {
+                "arrived": False,
+                "arrival_time": None,
+                "departure_time": None,
+                "text": ft.Text("", size=13, color=ft.Colors.GREY_300),
+            }
+            save_data()
+            refresh_layout()
+            field.value = ""
+        page.update()
+
+    def remove(field: ft.TextField, lst: list, states: dict):
+        val = field.value.strip()
+        if val in lst:
+            lst.remove(val)
+            states.pop(val, None)
+            save_data()
+            refresh_layout()
+            field.value = ""
+        page.update()
+
+    # Добавляем основной контейнер на страницу
+    page.add(main_container)
+
+    # Первоначальная настройка
+    refresh_layout()
 
 
 if __name__ == "__main__":
-    ft.app(main)
+    ft.app(target=main)
