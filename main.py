@@ -230,8 +230,8 @@ def main(page: ft.Page):
                             ),
                             vehicles_container,
                             create_input_section(
-                                "Новый номер авто",
-                                "Удалить номер",
+                                "Добавить ТС",
+                                "Удалить ТС",
                                 vehicles,
                                 vehicle_states,
                             ),
@@ -251,7 +251,7 @@ def main(page: ft.Page):
                             ),
                             personnel_container,
                             create_input_section(
-                                "Новое ФИО", "Удалить ФИО", personnel, personnel_states
+                                "Добавить", "Удалить", personnel, personnel_states
                             ),
                         ],
                         spacing=16,
