@@ -3,7 +3,6 @@ import json
 import datetime
 import os
 
-
 DATA_FILE = "data.json"
 
 
@@ -12,10 +11,10 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.GREEN_700)
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.vertical_alignment = ft.MainAxisAlignment.START
-    page.padding = 20
+    page.padding = 24
+    page.bgcolor = ft.Colors.BLACK
 
-    # Загрузка данных из JSON
+    # Загрузка данных
     vehicles = []
     personnel = []
     if os.path.exists(DATA_FILE):
@@ -24,206 +23,256 @@ def main(page: ft.Page):
             vehicles = data.get("vehicles", [])
             personnel = data.get("personnel", [])
 
-    # Состояния для автомобилей и персонала (не сохраняются)
+    # Состояния
     vehicle_states = {
-        veh: {
+        v: {
             "arrived": False,
             "arrival_time": None,
             "departure_time": None,
-            "text_control": ft.Text(""),
+            "text": ft.Text("", size=13, color=ft.Colors.GREY_300),
         }
-        for veh in vehicles
+        for v in vehicles
     }
     personnel_states = {
-        pers: {
+        p: {
             "arrived": False,
             "arrival_time": None,
             "departure_time": None,
-            "text_control": ft.Text(""),
+            "text": ft.Text("", size=13, color=ft.Colors.GREY_300),
         }
-        for pers in personnel
+        for p in personnel
     }
 
-    # Функция для сохранения списков в JSON
     def save_data():
-        data = {"vehicles": vehicles, "personnel": personnel}
         with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+            json.dump(
+                {"vehicles": vehicles, "personnel": personnel},
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
 
-    # Функция для обработки нажатия кнопки (общая для авто и персонала)
-    def toggle_state(e, key, states):
+    def toggle_arrival(e, key: str, states: dict):
         state = states[key]
+        now = datetime.datetime.now().strftime("%H:%M")
+
         if not state["arrived"]:
             state["arrived"] = True
-            state["arrival_time"] = datetime.datetime.now().strftime("%H:%M:%S")
-            e.control.bgcolor = ft.Colors.GREEN_500
-            state["text_control"].value = f"Прибыла в {state['arrival_time']}"
+            state["arrival_time"] = now
+            e.control.bgcolor = ft.Colors.GREEN_600
+            e.control.color = ft.Colors.WHITE
+            state["text"].value = f"прибыл  {now}"
+            state["text"].color = ft.Colors.GREEN_300
         else:
             state["arrived"] = False
-            state["departure_time"] = datetime.datetime.now().strftime("%H:%M:%S")
+            state["departure_time"] = now
             e.control.bgcolor = ft.Colors.GREY_800
-            state["text_control"].value = f"Убыла в {state['departure_time']}"
+            e.control.color = ft.Colors.WHITE70
+            state["text"].value = f"убыл    {now}"
+            state["text"].color = ft.Colors.RED_300
+
         page.update()
 
-    # Функция для создания ряда с кнопкой и текстом
-    def create_item_row(text, states):
-        button = ft.ElevatedButton(
+    def create_item_button(text: str, states: dict):
+        return ft.FilledButton(
             text,
-            bgcolor=ft.Colors.GREY_800,
-            color=ft.Colors.WHITE,
-            on_click=lambda e: toggle_state(e, text, states),
-            width=150,
-            height=50,
+            width=158,
+            height=48,
+            on_click=lambda e: toggle_arrival(e, text, states),
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.Padding.symmetric(horizontal=8, vertical=4),
             ),
         )
-        text_control = states[text]["text_control"]
-        return ft.Row(
-            [button, text_control],
-            alignment=ft.MainAxisAlignment.START,
-            spacing=10,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+
+    def build_grid(items: list, states: dict, columns: int = 3):
+        controls = []
+        row = []
+
+        for item in items:
+            col = ft.Column(
+                [
+                    create_item_button(item, states),
+                    states[item]["text"],
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=4,
+                tight=True,
+            )
+            row.append(col)
+
+            if len(row) == columns:
+                controls.append(
+                    ft.Row(
+                        row,
+                        alignment=ft.MainAxisAlignment.START,
+                        spacing=16,
+                        run_spacing=12,
+                    )
+                )
+                row = []
+
+        if row:
+            controls.append(
+                ft.Row(
+                    row,
+                    alignment=ft.MainAxisAlignment.START,
+                    spacing=16,
+                    run_spacing=12,
+                )
+            )
+
+        return ft.Column(
+            controls,
+            spacing=12,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
         )
 
-    # Контейнеры для таблиц
-    vehicles_container = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO)
-    personnel_container = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO)
+    vehicles_container = ft.Container(
+        content=build_grid(vehicles, vehicle_states),
+        height=480,
+        width=540,
+        border=ft.Border.all(1, ft.Colors.GREEN_900),
+        border_radius=10,
+        padding=16,
+        bgcolor=ft.Colors.GREY_900,
+    )
 
-    # Обновление таблиц
-    def update_tables():
-        vehicles_container.controls = [
-            create_item_row(veh, vehicle_states) for veh in vehicles
-        ]
-        personnel_container.controls = [
-            create_item_row(pers, personnel_states) for pers in personnel
-        ]
+    personnel_container = ft.Container(
+        content=build_grid(personnel, personnel_states),
+        height=480,
+        width=540,
+        border=ft.Border.all(1, ft.Colors.GREEN_900),
+        border_radius=10,
+        padding=16,
+        bgcolor=ft.Colors.GREY_900,
+    )
+
+    def refresh():
+        vehicles_container.content = build_grid(vehicles, vehicle_states)
+        personnel_container.content = build_grid(personnel, personnel_states)
         page.update()
 
-    # Инициализация таблиц
-    update_tables()
+    refresh()
 
-    # UI для добавления/удаления
-    new_vehicle_field = ft.TextField(
-        label="Новый номер авто",
-        width=200,
-        border_color=ft.Colors.GREEN_700,
-        focused_border_color=ft.Colors.GREEN_400,
-    )
-    add_vehicle_btn = ft.ElevatedButton(
-        "Добавить авто",
-        on_click=lambda e: add_item(new_vehicle_field, vehicles, vehicle_states),
-    )
-    remove_vehicle_field = ft.TextField(
-        label="Удалить номер авто",
-        width=200,
-        border_color=ft.Colors.GREEN_700,
-        focused_border_color=ft.Colors.GREEN_400,
-    )
-    remove_vehicle_btn = ft.ElevatedButton(
-        "Удалить авто",
-        on_click=lambda e: remove_item(remove_vehicle_field, vehicles, vehicle_states),
-    )
+    # Поля + кнопки (БЕЗ иконок — чтобы избежать ошибок)
+    def create_input_section(
+        label_new: str, label_remove: str, lst: list, states: dict
+    ):
+        new_field = ft.TextField(
+            label=label_new,
+            width=220,
+            dense=True,
+            border_color=ft.Colors.GREEN_800,
+            focused_border_color=ft.Colors.GREEN_400,
+        )
+        add_btn = ft.FilledButton(
+            "Добавить",
+            on_click=lambda e: add(new_field, lst, states),
+        )
 
-    new_personnel_field = ft.TextField(
-        label="Новое ФИО",
-        width=200,
-        border_color=ft.Colors.GREEN_700,
-        focused_border_color=ft.Colors.GREEN_400,
-    )
-    add_personnel_btn = ft.ElevatedButton(
-        "Добавить ФИО",
-        on_click=lambda e: add_item(new_personnel_field, personnel, personnel_states),
-    )
-    remove_personnel_field = ft.TextField(
-        label="Удалить ФИО",
-        width=200,
-        border_color=ft.Colors.GREEN_700,
-        focused_border_color=ft.Colors.GREEN_400,
-    )
-    remove_personnel_btn = ft.ElevatedButton(
-        "Удалить ФИО",
-        on_click=lambda e: remove_item(
-            remove_personnel_field, personnel, personnel_states
-        ),
-    )
+        remove_field = ft.TextField(
+            label=label_remove,
+            width=220,
+            dense=True,
+            border_color=ft.Colors.GREEN_800,
+            focused_border_color=ft.Colors.GREEN_400,
+        )
+        remove_btn = ft.OutlinedButton(
+            "Удалить",
+            on_click=lambda e: remove(remove_field, lst, states),
+        )
 
-    # Функции добавления/удаления
-    def add_item(field, list_, states):
-        value = field.value.strip()
-        if value and value not in list_:
-            list_.append(value)
-            states[value] = {
+        return ft.Column(
+            [
+                ft.Row([new_field, add_btn], spacing=12),
+                ft.Row([remove_field, remove_btn], spacing=12),
+            ],
+            spacing=8,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+    def add(field: ft.TextField, lst: list, states: dict):
+        val = field.value.strip()
+        if val and val not in lst:
+            lst.append(val)
+            states[val] = {
                 "arrived": False,
                 "arrival_time": None,
                 "departure_time": None,
-                "text_control": ft.Text(""),
+                "text": ft.Text("", size=13, color=ft.Colors.GREY_300),
             }
             save_data()
-            update_tables()
+            refresh()
             field.value = ""
             page.update()
 
-    def remove_item(field, list_, states):
-        value = field.value.strip()
-        if value in list_:
-            list_.remove(value)
-            del states[value]
+    def remove(field: ft.TextField, lst: list, states: dict):
+        val = field.value.strip()
+        if val in lst:
+            lst.remove(val)
+            states.pop(val, None)
             save_data()
-            update_tables()
+            refresh()
             field.value = ""
             page.update()
 
-    # Основной layout
-    main_row = ft.Row(
-        [
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text(
-                            "Транспортные средства",
-                            size=20,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        vehicles_container,
-                        ft.Row([new_vehicle_field, add_vehicle_btn]),
-                        ft.Row([remove_vehicle_field, remove_vehicle_btn]),
-                    ],
-                    spacing=20,
-                ),
-                border=ft.border.all(1, ft.Colors.GREEN_900),
-                border_radius=8,
-                padding=10,
-                width=400,
-                bgcolor=ft.Colors.GREY_900,
+    # Главный layout
+    page.add(
+        ft.Container(
+            content=ft.Row(
+                [
+                    ft.Column(
+                        [
+                            ft.Text(
+                                "Транспортные средства",
+                                size=20,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.GREEN_300,
+                            ),
+                            vehicles_container,
+                            create_input_section(
+                                "Новый номер авто",
+                                "Удалить номер",
+                                vehicles,
+                                vehicle_states,
+                            ),
+                        ],
+                        spacing=16,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
+                    ),
+                    ft.VerticalDivider(width=80, color=ft.Colors.GREEN_900),
+                    ft.Column(
+                        [
+                            ft.Text(
+                                "Командование",
+                                size=20,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.GREEN_300,
+                            ),
+                            personnel_container,
+                            create_input_section(
+                                "Новое ФИО", "Удалить ФИО", personnel, personnel_states
+                            ),
+                        ],
+                        spacing=16,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                vertical_alignment=ft.CrossAxisAlignment.START,
+                spacing=40,
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
             ),
-            ft.Container(width=50),  # Разделитель
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text(
-                            "Командование организации",
-                            size=20,
-                            weight=ft.FontWeight.BOLD,
-                        ),
-                        personnel_container,
-                        ft.Row([new_personnel_field, add_personnel_btn]),
-                        ft.Row([remove_personnel_field, remove_personnel_btn]),
-                    ],
-                    spacing=20,
-                ),
-                border=ft.border.all(1, ft.Colors.GREEN_900),
-                border_radius=8,
-                padding=10,
-                width=400,
-                bgcolor=ft.Colors.GREY_900,
-            ),
-        ],
-        alignment=ft.MainAxisAlignment.START,
-        spacing=20,
+            expand=True,
+            padding=20,
+        )
     )
 
-    page.add(main_row)
 
-
-ft.app(target=main)
+if __name__ == "__main__":
+    ft.app(main)
