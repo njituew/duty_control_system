@@ -3,6 +3,7 @@ import json
 import datetime
 import os
 
+
 DATA_FILE = "data.json"
 
 
@@ -14,7 +15,6 @@ def main(page: ft.Page):
     page.padding = 24
     page.bgcolor = ft.Colors.BLACK
 
-    # Загрузка данных
     vehicles = []
     personnel = []
     if os.path.exists(DATA_FILE):
@@ -23,7 +23,6 @@ def main(page: ft.Page):
             vehicles = data.get("vehicles", [])
             personnel = data.get("personnel", [])
 
-    # Состояния
     vehicle_states = {
         v: {
             "arrived": False,
@@ -156,7 +155,6 @@ def main(page: ft.Page):
 
     refresh()
 
-    # Поля + кнопки (БЕЗ иконок — чтобы избежать ошибок)
     def create_input_section(
         label_new: str, label_remove: str, lst: list, states: dict
     ):
@@ -218,7 +216,6 @@ def main(page: ft.Page):
             field.value = ""
             page.update()
 
-    # Главный layout
     page.add(
         ft.Container(
             content=ft.Row(
