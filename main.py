@@ -7,7 +7,7 @@ DATA_FILE = "data.json"
 
 
 def main(page: ft.Page):
-    page.title = "Система контроля ТС и командования"
+    page.title = "Расход"
     page.theme_mode = ft.ThemeMode.DARK
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.GREEN_700)
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
