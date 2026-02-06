@@ -3,6 +3,7 @@ import json
 import datetime
 import os
 
+
 DATA_FILE = "data.json"
 
 
@@ -83,7 +84,6 @@ def main(page: ft.Page):
             ),
         )
 
-    # Адаптивные функции
     def get_columns_count(width: float) -> int:
         if width < 600:
             return 2
@@ -115,7 +115,7 @@ def main(page: ft.Page):
         return ft.GridView(
             controls=grid_items,
             runs_count=columns,
-            max_extent=180,  # максимальная ширина колонки
+            max_extent=180,
             spacing=12,
             run_spacing=12,
             child_aspect_ratio=1.2,
@@ -144,7 +144,6 @@ def main(page: ft.Page):
             expand=True,
         )
 
-    # Создание контейнеров
     vehicles_container = ft.Container(
         border=ft.Border.all(1, ft.Colors.GREEN_900),
         border_radius=10,
@@ -161,16 +160,13 @@ def main(page: ft.Page):
         expand=True,
     )
 
-    # Основной контейнер
     main_container = ft.Container(expand=True)
 
     def refresh_layout(width: float = None):
         if width is None:
             width = page.width
 
-        # Определяем режим отображения
         if width < 880:
-            # Вертикальный режим
             columns = get_columns_count(width)
 
             vehicles_container.content = build_grid(vehicles, vehicle_states, columns)
@@ -180,7 +176,6 @@ def main(page: ft.Page):
 
             main_container.content = ft.Column(
                 [
-                    # Секция ТС
                     ft.Text(
                         "Транспортные средства",
                         size=20,
@@ -195,7 +190,6 @@ def main(page: ft.Page):
                         vehicle_states,
                     ),
                     ft.Divider(height=30, color=ft.Colors.GREEN_900),
-                    # Секция командования
                     ft.Text(
                         "Командование",
                         size=20,
@@ -215,7 +209,6 @@ def main(page: ft.Page):
                 expand=True,
             )
         else:
-            # Горизонтальный режим
             columns = get_columns_count((width - 160) // 2)
 
             vehicles_container.content = build_grid(vehicles, vehicle_states, columns)
@@ -225,7 +218,6 @@ def main(page: ft.Page):
 
             main_container.content = ft.Row(
                 [
-                    # Левая колонка - ТС
                     ft.Column(
                         [
                             ft.Text(
@@ -247,7 +239,6 @@ def main(page: ft.Page):
                         expand=True,
                     ),
                     ft.VerticalDivider(width=60, color=ft.Colors.GREEN_900),
-                    # Правая колонка - командование
                     ft.Column(
                         [
                             ft.Text(
@@ -346,10 +337,8 @@ def main(page: ft.Page):
             field.value = ""
         page.update()
 
-    # Добавляем основной контейнер на страницу
     page.add(main_container)
 
-    # Первоначальная настройка
     refresh_layout()
 
 
