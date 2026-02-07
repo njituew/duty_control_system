@@ -22,19 +22,20 @@ def main(page: ft.Page):
             vehicles = data.get("vehicles", [])
             personnel = data.get("personnel", [])
 
-    def create_state_dict(items):
+    def create_state_dict(items, is_vehicles=False):
         return {
             item: {
                 "arrived": False,
                 "arrival_time": None,
                 "departure_time": None,
                 "text": ft.Text("", size=13, color=ft.Colors.GREY_300),
+                "is_vehicle": is_vehicles,
             }
             for item in items
         }
 
-    vehicle_states = create_state_dict(vehicles)
-    personnel_states = create_state_dict(personnel)
+    vehicle_states = create_state_dict(vehicles, is_vehicles=True)
+    personnel_states = create_state_dict(personnel, is_vehicles=False)
 
     def save_data():
         with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -48,16 +49,27 @@ def main(page: ft.Page):
     def toggle_state(e, key, states):
         state = states[key]
         now = datetime.datetime.now().strftime("%H:%M")
+        is_vehicle = state["is_vehicle"]
 
         if not state["arrived"]:
             state.update({"arrived": True, "arrival_time": now, "departure_time": None})
             e.control.bgcolor = ft.Colors.GREEN_600
-            state["text"].value = f"прибыл  {now}"
+
+            if is_vehicle:
+                state["text"].value = f"прибыло  {now}"
+            else:
+                state["text"].value = f"прибыл   {now}"
+
             state["text"].color = ft.Colors.GREEN_300
         else:
             state.update({"arrived": False, "departure_time": now})
             e.control.bgcolor = ft.Colors.GREY_800
-            state["text"].value = f"убыл    {now}"
+
+            if is_vehicle:
+                state["text"].value = f"убыло    {now}"
+            else:
+                state["text"].value = f"убыл     {now}"
+
             state["text"].color = ft.Colors.RED_300
 
         e.control.color = ft.Colors.WHITE
@@ -136,7 +148,7 @@ def main(page: ft.Page):
             [field, button], spacing=12, alignment=ft.MainAxisAlignment.CENTER
         )
 
-    def create_input_section(add_label, remove_label, lst, states):
+    def create_input_section(add_label, remove_label, lst, states, is_vehicles=False):
         def add_item(field):
             if (val := field.value.strip()) and val not in lst:
                 lst.append(val)
@@ -145,6 +157,7 @@ def main(page: ft.Page):
                     "arrival_time": None,
                     "departure_time": None,
                     "text": ft.Text("", size=13, color=ft.Colors.GREY_300),
+                    "is_vehicle": is_vehicles,
                 }
                 save_data()
                 refresh_layout()
@@ -187,7 +200,11 @@ def main(page: ft.Page):
                     ),
                     vehicles_container,
                     create_input_section(
-                        "Добавить ТС", "Удалить ТС", vehicles, vehicle_states
+                        "Добавить ТС",
+                        "Удалить ТС",
+                        vehicles,
+                        vehicle_states,
+                        is_vehicles=True,
                     ),
                     ft.Divider(height=30, color=ft.Colors.GREEN_900),
                     ft.Text(
@@ -198,7 +215,11 @@ def main(page: ft.Page):
                     ),
                     personnel_container,
                     create_input_section(
-                        "Добавить", "Удалить", personnel, personnel_states
+                        "Добавить",
+                        "Удалить",
+                        personnel,
+                        personnel_states,
+                        is_vehicles=False,
                     ),
                 ],
                 spacing=20,
@@ -218,7 +239,11 @@ def main(page: ft.Page):
                             ),
                             vehicles_container,
                             create_input_section(
-                                "Добавить ТС", "Удалить ТС", vehicles, vehicle_states
+                                "Добавить ТС",
+                                "Удалить ТС",
+                                vehicles,
+                                vehicle_states,
+                                is_vehicles=True,
                             ),
                         ],
                         spacing=16,
@@ -236,7 +261,11 @@ def main(page: ft.Page):
                             ),
                             personnel_container,
                             create_input_section(
-                                "Добавить", "Удалить", personnel, personnel_states
+                                "Добавить",
+                                "Удалить",
+                                personnel,
+                                personnel_states,
+                                is_vehicles=False,
                             ),
                         ],
                         spacing=16,
