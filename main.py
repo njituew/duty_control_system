@@ -5,6 +5,7 @@ import os
 
 DATA_FILE = "data.json"
 
+
 def main(page: ft.Page):
     page.title = "Расход"
     page.theme_mode = ft.ThemeMode.DARK
@@ -59,7 +60,11 @@ def main(page: ft.Page):
             ft.Row(
                 [
                     ft.Text(text),
-                    ft.TextButton("Отменить", on_click=undo) if undo else ft.Container(),
+                    (
+                        ft.TextButton("Отменить", on_click=undo)
+                        if undo
+                        else ft.Container()
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             )
@@ -70,7 +75,7 @@ def main(page: ft.Page):
     # ---------------- add / delete ----------------
 
     def open_add_dialog(title, lst, states, is_vehicle):
-        field = ft.TextField(label="Название", autofocus=True)
+        field = ft.TextField(label="ФИО / номер ТС", autofocus=True)
 
         def confirm(e):
             val = field.value.strip()
@@ -237,12 +242,8 @@ def main(page: ft.Page):
         width = page.width
         columns = 2 if width < 700 else 3
 
-        vehicles_container.content = build_grid(
-            vehicles, vehicle_states, columns
-        )
-        personnel_container.content = build_grid(
-            personnel, personnel_states, columns
-        )
+        vehicles_container.content = build_grid(vehicles, vehicle_states, columns)
+        personnel_container.content = build_grid(personnel, personnel_states, columns)
 
         if width < 880:
             main_container.content = ft.Column(
